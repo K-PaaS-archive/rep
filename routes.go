@@ -14,6 +14,9 @@ const (
 
 	PingRoute     = "Ping"
 	EvacuateRoute = "Evacuate"
+
+	// Adde for PaaS-TA
+	ContainerListRoute = "ContainerList"
 )
 
 func NewRoutes(networkAccessible bool) rata.Routes {
@@ -34,6 +37,9 @@ func NewRoutes(networkAccessible bool) rata.Routes {
 		routes = append(routes,
 			rata.Route{Path: "/ping", Method: "GET", Name: PingRoute},
 			rata.Route{Path: "/evacuate", Method: "POST", Name: EvacuateRoute},
+
+			// Added for PaaS-TA
+			rata.Route{Path: "/v1/containers", Method: "GET", Name: ContainerListRoute},
 		)
 	}
 	return routes

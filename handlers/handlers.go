@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	GardenClient "code.cloudfoundry.org/garden/client"
 	"net/http"
 
 	"code.cloudfoundry.org/executor"
@@ -15,6 +16,8 @@ import (
 func New(
 	localCellClient auctioncellrep.AuctionCellClient,
 	localMetricCollector MetricCollector,
+	// Added for PaaS-TA
+	gardenClient GardenClient.Client,
 	executorClient executor.Client,
 	evacuatable evacuation_context.Evacuatable,
 	requestMetrics helpers.RequestMetrics,
@@ -44,6 +47,10 @@ func New(
 
 		handlers[rep.PingRoute] = logWrap(pingHandler.ServeHTTP, logger)
 		handlers[rep.EvacuateRoute] = logWrap(evacuationHandler.ServeHTTP, logger)
+
+		// Added for PaaS-TA
+		containerHandler := NewContainerListHandler(logger, executorClient, gardenClient)
+		handlers[rep.ContainerListRoute] = logWrap(containerHandler.ServeHTTP, logger)
 	}
 
 	return handlers
@@ -56,13 +63,20 @@ func New(
 func NewLegacy(
 	localCellClient auctioncellrep.AuctionCellClient,
 	localMetricCollector MetricCollector,
+
+	// Added for PaaS-TA
+	gardenClient GardenClient.Client,
+
 	executorClient executor.Client,
 	evacuatable evacuation_context.Evacuatable,
 	requestMetrics helpers.RequestMetrics,
 	logger lager.Logger,
 ) rata.Handlers {
-	insecureHandlers := New(localCellClient, localMetricCollector, executorClient, evacuatable, requestMetrics, logger, false)
-	secureHandlers := New(localCellClient, localMetricCollector, executorClient, evacuatable, requestMetrics, logger, true)
+	// Added for PaaS-TA
+	//insecureHandlers := New(localCellClient, localMetricCollector, executorClient, evacuatable, requestMetrics, logger, false)
+	//secureHandlers := New(localCellClient, localMetricCollector, executorClient, evacuatable, requestMetrics, logger, true)
+	insecureHandlers := New(localCellClient, localMetricCollector, gardenClient, executorClient, evacuatable, requestMetrics, logger, false)
+	secureHandlers := New(localCellClient, localMetricCollector, gardenClient, executorClient, evacuatable, requestMetrics, logger, true)
 	for name, handler := range secureHandlers {
 		insecureHandlers[name] = handler
 	}

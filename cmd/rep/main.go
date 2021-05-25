@@ -49,6 +49,9 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/sigmon"
 	"github.com/tedsuo/rata"
+
+	// Added for PaaS-TA
+	GardenClient "code.cloudfoundry.org/garden/client"
 )
 
 var configFilePath = flag.String(
@@ -98,7 +101,9 @@ func main() {
 
 	rootFSMap := repConfig.PreloadedRootFS.StackPathMap()
 
-	executorClient, containerMetricsProvider, executorMembers, err := executorinit.Initialize(logger, repConfig.ExecutorConfig, repConfig.CellID, repConfig.Zone, rootFSMap, metronClient, clock)
+	// Added for PaaS-TA
+	//executorClient, containerMetricsProvider, executorMembers, err := executorinit.Initialize(logger, repConfig.ExecutorConfig, repConfig.CellID, repConfig.Zone, rootFSMap, metronClient, clock)
+	executorClient, containerMetricsProvider, executorMembers, gardenClient, err := executorinit.Initialize(logger, repConfig.ExecutorConfig, repConfig.CellID, repConfig.Zone, rootFSMap, metronClient, clock)
 	if err != nil {
 		logger.Error("failed-to-initialize-executor", err)
 		os.Exit(1)
@@ -150,8 +155,11 @@ func main() {
 		"State", "ContainerMetrics", "Perform", "Reset", "StopLRPInstance", "CancelTask", //over https only
 	}
 	requestMetrics := helpers.NewRequestMetricsNotifier(logger, clock, metronClient, time.Duration(repConfig.ReportInterval), requestTypes)
-	httpServer := initializeServer(auctionCellRep, executorClient, evacuatable, requestMetrics, logger, repConfig, false)
-	httpsServer := initializeServer(auctionCellRep, executorClient, evacuatable, requestMetrics, logger, repConfig, true)
+	// Added for PaaS-TA
+	//httpServer := initializeServer(auctionCellRep, executorClient, evacuatable, requestMetrics, logger, repConfig, false)
+	//httpsServer := initializeServer(auctionCellRep, executorClient, evacuatable, requestMetrics, logger, repConfig, true)
+	httpServer := initializeServer(auctionCellRep, executorClient, gardenClient, evacuatable, requestMetrics, logger, repConfig, false)
+	httpsServer := initializeServer(auctionCellRep, executorClient, gardenClient, evacuatable, requestMetrics, logger, repConfig, true)
 
 	opGenerator := generator.New(
 		repConfig.CellID,
@@ -311,13 +319,18 @@ func initializeCellPresence(
 func initializeServer(
 	auctionCellRep *auctioncellrep.AuctionCellRep,
 	executorClient executor.Client,
+	// Added for PaaS-TA
+	gardenClient GardenClient.Client,
 	evacuatable evacuation_context.Evacuatable,
 	requestMetrics helpers.RequestMetrics,
 	logger lager.Logger,
 	repConfig config.RepConfig,
 	networkAccessible bool,
 ) ifrit.Runner {
-	handlers := handlers.New(auctionCellRep, auctionCellRep, executorClient, evacuatable, requestMetrics, logger, networkAccessible)
+	// Added for PaaS-TA
+	//handlers := handlers.New(auctionCellRep, auctionCellRep, executorClient, evacuatable, requestMetrics, logger, networkAccessible)
+	handlers := handlers.New(auctionCellRep, auctionCellRep, gardenClient, executorClient, evacuatable, requestMetrics, logger, networkAccessible)
+
 	routes := rep.NewRoutes(networkAccessible)
 	router, err := rata.NewRouter(routes, handlers)
 
